@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Variance Lab</title>
+<style>
+:root{
+  --ink:#0E1116;--panel:#161B22;--panel2:#1D242D;--line:#2A333F;
+  --text:#E6E2D9;--muted:#8B95A3;--amber:#D8A657;--jade:#55A88C;--ox:#C0473E;
+  --serif:'Iowan Old Style','Palatino Linotype',Georgia,serif;
+  --sans:ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+  --mono:ui-monospace,'SF Mono',Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:var(--ink);color:var(--text);font-family:var(--sans);font-size:15px;
+  padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom);-webkit-font-smoothing:antialiased}
+.wrap{max-width:560px;margin:0 auto;padding:14px 14px 40px}
+h1{font-family:var(--serif);font-size:24px;font-weight:600;margin:0 0 2px;letter-spacing:-.01em}
+.eyebrow{display:block;font-family:var(--mono);font-size:9.5px;letter-spacing:.22em;
+  text-transform:uppercase;color:var(--amber);margin-bottom:3px}
+.grp{border:1px solid var(--line);border-radius:11px;background:var(--panel);padding:12px 13px;margin-top:12px}
+.grp h3{margin:0 0 10px;font-family:var(--mono);font-size:9.5px;letter-spacing:.2em;
+  text-transform:uppercase;color:var(--amber);font-weight:400}
+.row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:7px 0}
+.row+.row{border-top:1px solid rgba(42,51,63,.55)}
+.row .t{font-size:13px}
+.row .d{font-size:10.5px;color:var(--muted);margin-top:2px;line-height:1.4}
+input.num{background:var(--panel2);border:1px solid var(--line);border-radius:7px;padding:7px 8px;
+  width:104px;text-align:right;font-family:var(--mono);font-size:13px;color:var(--text)}
+.seg{display:flex;background:var(--panel2);border:1px solid var(--line);border-radius:7px;padding:2px;flex:none}
+.seg button{background:none;border:0;border-radius:5px;padding:6px 9px;font-size:11px;color:var(--muted);cursor:pointer;white-space:nowrap}
+.seg button[aria-pressed=true]{background:var(--amber);color:#20160A}
+input[type=range]{width:100%;accent-color:var(--amber);margin:6px 0 0}
+.sliderval{font-family:var(--mono);font-size:12.5px;color:var(--amber)}
+.tiles{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+.tile{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 11px}
+.tile .v{font-family:var(--mono);font-size:19px;letter-spacing:-.02em}
+.tile .k{font-family:var(--mono);font-size:8.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--muted);margin-top:3px}
+.tile .s{font-size:10.5px;color:var(--muted);margin-top:4px;line-height:1.35}
+.pos{color:var(--jade)}.neg{color:var(--ox)}.amb{color:var(--amber)}
+.verdict{border:1px solid var(--line);border-radius:11px;padding:12px 13px;margin-top:12px;background:var(--panel)}
+.verdict.ok{border-color:rgba(85,168,140,.5);background:rgba(85,168,140,.07)}
+.verdict.bad{border-color:rgba(192,71,62,.5);background:rgba(192,71,62,.07)}
+.verdict h4{margin:0 0 5px;font-size:14px}
+.verdict p{margin:0;font-size:12px;color:var(--muted);line-height:1.55}
+.verdict p b{color:var(--text)}
+.kv{display:flex;justify-content:space-between;padding:6px 0;font-size:12.5px}
+.kv+.kv{border-top:1px solid rgba(42,51,63,.55)}
+.kv .k{color:var(--muted)}.kv .v{font-family:var(--mono)}
+.note{font-size:10.5px;color:var(--muted);line-height:1.6;margin-top:10px}
+svg{display:block;width:100%;height:auto}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <span class="eyebrow">The Ledger</span>
+  <h1>Variance Lab &middot; Blackjack</h1>
+
+  <div class="grp"><h3>Your play</h3>
+    <div class="row"><div><div class="t">Read rate</div><div class="d">Share of hands where you get a usable hole-card read. You bet before the deal, so the rest are basic strategy.</div></div></div>
+    <input type="range" id="read" min="0" max="100" step="1" value="90">
+    <div style="text-align:right"><span class="sliderval" id="readV">90%</span></div>
+    <div class="row"><div><div class="t">Misread</div><div class="d">On read hands, how often the rank is wrong by one or two.</div></div>
+      <span class="sliderval" id="misV">1 in 15</span></div>
+    <input type="range" id="mis" min="0" max="40" step="1" value="15">
+    <div class="row"><div><div class="t">Bet per spot ($)</div></div><input class="num" id="bet" type="number" value="100" step="25"></div>
+    <div class="row"><div><div class="t">Spots played</div><div class="d">Spots share the dealer, so they are correlated, not independent.</div></div>
+      <div class="seg" id="spots"><button data-v="1">1</button><button data-v="2">2</button><button data-v="3">3</button><button data-v="4">4</button></div></div>
+    <div class="row"><div><div class="t">Hands logged</div><div class="d">Total across all spots.</div></div><input class="num" id="hands" type="number" value="10000" step="1000"></div>
+    <div class="row"><div><div class="t">Hands / hour</div><div class="d">All spots combined.</div></div><input class="num" id="hph" type="number" value="80" step="10"></div>
+    <div class="row"><div><div class="t">Actual result ($)</div><div class="d">Net, after everything. Blank to skip the verdict.</div></div><input class="num" id="actual" type="number" placeholder="—"></div>
+  </div>
+
+  <div class="grp"><h3>Table rules</h3>
+    <div class="row"><div class="t">Dealer soft 17</div>
+      <div class="seg" id="s17"><button data-v="S17">Stands</button><button data-v="H17">Hits</button></div></div>
+    <div class="row"><div class="t">Blackjack pays</div>
+      <div class="seg" id="bj"><button data-v="32">3:2</button><button data-v="65">6:5</button></div></div>
+    <div class="row"><div><div class="t">Insurance on read hands</div><div class="d">Insuring a known ten under an ace is worth +2.37% on its own.</div></div>
+      <div class="seg" id="ins"><button data-v="0">No</button><button data-v="1">Yes</button></div></div>
+    <div class="row"><div class="t">Late surrender</div>
+      <div class="seg" id="surr"><button data-v="0">No</button><button data-v="1">Yes</button></div></div>
+  </div>
+
+  <div class="tiles" id="tiles"></div>
+  <div class="verdict" id="verdict"></div>
+  <div class="grp"><h3>Outcome cone</h3><div id="cone"></div></div>
+  <div class="grp"><h3>Diagnostics</h3><div id="diag"></div></div>
+  <p class="note" id="note"></p>
+</div>
+
+<script>
+/* Constants: exact DP for EVs, 1.1M-hand Monte Carlo for variance and spot covariance.
+   Read-hand EV falls linearly with misread rate; slope measured, not assumed. */
+const HC={S17:0.10176,H17:0.09800};      // full read, no surrender, no insurance
+const SURR_HC={S17:0.01404,H17:0.01410}; // late surrender adds
+const BS={S17:-0.0057,H17:-0.0079};      // no read: basic strategy
+const SURR_BS={S17:0.0009,H17:0.0010};
+const INS=0.023669;                       // insuring a known ten under an ace
+const SLOPE_NOINS=0.1176, SLOPE_INS=0.1525;  // EV lost per unit of misread rate
+const VAR_HC=1.5028, COV_HC=0.7137;      // per hand, read regime
+const VAR_BS=1.327,  COV_BS=0.492;       // no-read regime
+const PAY65=-0.013529;
+
+const S={read:0.90,mis:15,bet:100,spots:1,hands:10000,hph:80,actual:null,
+         s17:'S17',bj:'32',ins:1,surr:0};
+const $=id=>document.getElementById(id);
+const N=z=>{const t=1/(1+0.2316419*Math.abs(z));
+  const d=0.3989423*Math.exp(-z*z/2);
+  const p=d*t*(0.3193815+t*(-0.3565638+t*(1.781478+t*(-1.821256+t*1.330274))));
+  return z>0?1-p:p;};
+const money=x=>(x<0?'\u2212$':'$')+Math.abs(Math.round(x)).toLocaleString();
+const pc=x=>(x>=0?'+':'\u2212')+Math.abs(100*x).toFixed(2)+'%';
+
+function model(){
+  const p=S.mis>0?1/S.mis:0, k=S.spots;
+  const insAdd=S.ins?INS:0, slope=S.ins?SLOPE_INS:SLOPE_NOINS;
+  const pay=S.bj==='65'?PAY65:0;
+  let muR=HC[S.s17]+insAdd-slope*p+pay+(S.surr?SURR_HC[S.s17]:0);
+  let muB=BS[S.s17]+pay+(S.surr?SURR_BS[S.s17]:0);
+  const f=S.read;
+  const mu=f*muR+(1-f)*muB;
+  const varH=f*VAR_HC+(1-f)*VAR_BS+(k-1)*(f*COV_HC+(1-f)*COV_BS)
+             +k*f*(1-f)*Math.pow(muR-muB,2);
+  const n=Math.max(1,S.hands), sd=Math.sqrt(varH);
+  const EV=n*mu*S.bet, SD=Math.sqrt(n*varH)*S.bet;
+  const n0=varH/(mu*mu);
+  const pDown=N(-mu*Math.sqrt(n)/sd);
+  const beRead=(0-muB)/(muR-muB);
+  const beMis=(HC[S.s17]+insAdd+pay+(S.surr?SURR_HC[S.s17]:0))/slope;
+  const n95=Math.pow(1.645*sd/mu,2);
+  return {mu,muR,muB,varH,sd,EV,SD,n0,pDown,beRead,beMis,n95,n,f,p,k};
+}
+
+function render(){
+  const m=model();
+  $('tiles').innerHTML=[
+    ['Edge per hand',pc(m.mu),m.mu>0?'pos':'neg',(m.mu*S.bet>=0?'+':'\u2212')+'$'+Math.abs(m.mu*S.bet).toFixed(2)+' per hand'],
+    ['Per hour',money(m.mu*S.bet*S.hph),m.mu>0?'pos':'neg','at '+S.hph+' hands/hr'],
+    ['Expected over sample',money(m.EV),m.EV>0?'pos':'neg','\u00b11\u03c3 = '+money(m.SD)],
+    ['N\u2080',m.n0>1e6?'\u2014':Math.round(m.n0).toLocaleString(),'amb','hands for edge = 1 SD'],
+    ['P(at or below $0)',(100*m.pDown).toFixed(2)+'%',m.pDown>0.2?'neg':'',(m.n).toLocaleString()+' hands in'],
+    ['95% sure of profit',m.n95>1e7?'\u2014':Math.round(m.n95).toLocaleString(),'amb',
+      m.n95>1e7?'never at this edge':Math.round(m.n95/S.hph)+' hours']
+  ].map(t=>'<div class="tile"><div class="v '+t[2]+'">'+t[1]+'</div><div class="k">'+t[0]+'</div><div class="s">'+t[3]+'</div></div>').join('');
+
+  const v=$('verdict');
+  if(S.actual===null||isNaN(S.actual)){
+    v.className='verdict';
+    v.innerHTML='<h4>Enter your actual result</h4><p>Put in your net over those '+m.n.toLocaleString()+
+      ' hands and this becomes a hypothesis test on your edge instead of a projection.</p>';
+  }else{
+    const z=(S.actual-m.EV)/m.SD;
+    const worse=N(z);
+    const lo=(S.actual/(m.n*S.bet))-1.96*m.sd/Math.sqrt(m.n);
+    const hi=(S.actual/(m.n*S.bet))+1.96*m.sd/Math.sqrt(m.n);
+    const ok=Math.abs(z)<2;
+    v.className='verdict '+(ok?'ok':'bad');
+    v.innerHTML='<h4>'+(Math.abs(z)<1?'Normal variance':Math.abs(z)<2?'Unremarkable':
+        Math.abs(z)<3?'The model and your results disagree':'Your inputs are wrong somewhere')+
+      ' &middot; z = '+z.toFixed(2)+'</h4><p>Modelled EV was <b>'+money(m.EV)+'</b>, you have <b>'+money(S.actual)+
+      '</b>. Only <b>'+(100*worse).toFixed(1)+'%</b> of samples run this bad or worse at the edge you entered.<br><br>'+
+      'Your realised edge is <b>'+pc(S.actual/(m.n*S.bet))+'</b>. The 95% interval around it is <b>'+
+      pc(lo)+' to '+pc(hi)+'</b> \u2014 if the edge you entered ('+pc(m.mu)+') sits outside that, the inputs are the problem, not luck.</p>';
+  }
+
+  $('diag').innerHTML=[
+    ['Read hands are worth',pc(m.muR)],
+    ['No-read hands cost',pc(m.muB)],
+    ['Each misread costs',(S.ins?SLOPE_INS:SLOPE_NOINS).toFixed(3)+' units'],
+    ['Breakeven read rate',(100*m.beRead).toFixed(1)+'%'],
+    ['Breakeven misread rate',m.beMis>=1?'>100% \u2014 cannot get there':(100*m.beMis).toFixed(0)+'%'],
+    ['SD per hand',m.sd.toFixed(3)+' units'+(m.k>1?' ('+m.k+'-spot correlation included)':'')]
+  ].map(r=>'<div class="kv"><span class="k">'+r[0]+'</span><span class="v">'+r[1]+'</span></div>').join('');
+
+  cone(m);
+  $('note').innerHTML='Read-hand EV from exact dynamic programming; variance and cross-spot covariance from a 1.1M-hand Monte Carlo (SD '+
+    Math.sqrt(VAR_HC).toFixed(3)+', spot-cov '+COV_HC.toFixed(3)+' \u2014 within noise of the 1.2M-hand figures in your original lab). '+
+    'Misreads are modelled as the hole card read one or two ranks off, with the hand then played on the wrong chart and settled against the truth; '+
+    'the EV cost is linear in the misread rate and variance barely moves. Infinite-deck, one split, DAS, flat betting, normal approximation for the cone.';
+}
+
+function cone(m){
+  const W=520,H=190,pad=34;
+  const pts=24, xs=i=>pad+(W-pad-8)*i/pts, n=i=>m.n*i/pts;
+  const top=m.n*m.mu*S.bet+2*Math.sqrt(m.n*m.varH)*S.bet;
+  const bot=m.n*m.mu*S.bet-2*Math.sqrt(m.n*m.varH)*S.bet;
+  const hi=Math.max(top,S.actual||0,0)*1.05, lo=Math.min(bot,S.actual||0,0)*1.05;
+  const ys=v=>H-pad-(v-lo)/(hi-lo)*(H-pad-12);
+  let a2='',b2='',a1='',b1='',ln='';
+  for(let i=0;i<=pts;i++){
+    const N2=n(i),e=N2*m.mu*S.bet,s=Math.sqrt(N2*m.varH)*S.bet;
+    a2+=(i?' L':'M')+xs(i)+' '+ys(e+2*s); b2=' L'+xs(i)+' '+ys(e-2*s)+b2;
+    a1+=(i?' L':'M')+xs(i)+' '+ys(e+s);   b1=' L'+xs(i)+' '+ys(e-s)+b1;
+    ln+=(i?' L':'M')+xs(i)+' '+ys(e);
+  }
+  const dot=(S.actual!==null&&!isNaN(S.actual))
+    ?'<circle cx="'+xs(pts)+'" cy="'+ys(S.actual)+'" r="5" fill="'+(S.actual>=m.EV?'#55A88C':'#C0473E')+'" stroke="#0E1116" stroke-width="2"/>':'';
+  $('cone').innerHTML='<svg viewBox="0 0 '+W+' '+H+'">'+
+    '<path d="'+a2+b2+' Z" fill="rgba(216,166,87,.12)"/>'+
+    '<path d="'+a1+b1+' Z" fill="rgba(216,166,87,.22)"/>'+
+    '<line x1="'+pad+'" y1="'+ys(0)+'" x2="'+(W-8)+'" y2="'+ys(0)+'" stroke="#2A333F" stroke-dasharray="3 3"/>'+
+    '<path d="'+ln+'" fill="none" stroke="#D8A657" stroke-width="2"/>'+dot+
+    '<text x="'+pad+'" y="'+(H-10)+'" fill="#8B95A3" font-size="10" font-family="ui-monospace,monospace">0</text>'+
+    '<text x="'+(W-8)+'" y="'+(H-10)+'" fill="#8B95A3" font-size="10" text-anchor="end" font-family="ui-monospace,monospace">'+m.n.toLocaleString()+' hands</text>'+
+    '<text x="4" y="'+ys(0)+'" fill="#8B95A3" font-size="10" font-family="ui-monospace,monospace">$0</text></svg>';
+}
+
+function seg(id,key,num){
+  const box=$(id);
+  box.querySelectorAll('button').forEach(b=>{
+    b.setAttribute('aria-pressed',String(String(S[key])===b.dataset.v));
+    b.onclick=()=>{S[key]=num?+b.dataset.v:b.dataset.v;
+      box.querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));
+      render();};
+  });
+}
+[['spots','spots',1],['s17','s17',0],['bj','bj',0],['ins','ins',1],['surr','surr',1]]
+  .forEach(([i,k,n])=>seg(i,k,n));
+$('read').oninput=e=>{S.read=+e.target.value/100;$('readV').textContent=e.target.value+'%';render()};
+$('mis').oninput=e=>{const v=+e.target.value;S.mis=v;
+  $('misV').textContent=v===0?'never':'1 in '+v;render()};
+[['bet','bet'],['hands','hands'],['hph','hph']].forEach(([id,k])=>{
+  $(id).oninput=e=>{S[k]=+e.target.value||0;render()};});
+$('actual').oninput=e=>{S.actual=e.target.value===''?null:+e.target.value;render()};
+render();
+</script>
+</body>
+</html>
